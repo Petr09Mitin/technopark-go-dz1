@@ -18,6 +18,38 @@ type Arguments struct {
 	OutputFile string
 }
 
+func handleError(err error) {
+	const docString string = `
+Usage: 
+	uniq [-c | -d | -u] [-i] [-f fields] [-s chars] [input_file [output_file]]
+
+Parameters:
+
+	-c: count number of occurrences
+
+	-d: print only duplicate lines
+
+	-u: print only unique lines
+
+	-i: ignore case differences
+
+	-f fields: avoid comparing the first fields fields
+
+	-s chars: avoid comparing the first chars characters
+
+	input_file: file to read from
+	
+	output_file: file to write to
+`
+	if err != nil {
+		fmt.Println(err)
+		if err.Error() == "invalid flags" {
+			fmt.Print(docString)
+		}
+		os.Exit(0)
+	}
+}
+
 // ValidateArguments validates the input and output files.
 func ValidateArguments(arguments Arguments) error {
 	if arguments.InputFile != "" {
@@ -139,25 +171,16 @@ func main() {
 
 	inputFile, outputFile, argumentsErr := ParseInAndOutFiles()
 
-	if argumentsErr != nil {
-		fmt.Println(argumentsErr)
-		return
-	}
+	handleError(argumentsErr)
 
 	reader, writer := GetReaderAndWriter(inputFile, outputFile)
 
 	lines, err := ReadInput(reader)
 	inputFile.Close()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	handleError(err)
 
 	linesData, err := uniqueize.Uniqueize(lines, flags)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	handleError(err)
 
 	WriteOutput(flags, writer, linesData)
 	outputFile.Close()
