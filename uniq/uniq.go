@@ -12,11 +12,13 @@ import (
 	"github.com/Petr09Mitin/technopark-go-dz1/uniq/uniqueize"
 )
 
+// Arguments represents the input and output files.
 type Arguments struct {
 	InputFile  string
 	OutputFile string
 }
 
+// ValidateArguments validates the input and output files.
 func ValidateArguments(arguments Arguments) error {
 	if arguments.InputFile != "" {
 		if _, err := os.Stat(arguments.InputFile); os.IsNotExist(err) {
@@ -33,6 +35,7 @@ func ValidateArguments(arguments Arguments) error {
 	return nil
 }
 
+// ParseFlags parses the flags from the command line arguments and returns the flags.
 func ParseFlags() (flags uniqueize.Flags) {
 	flags.Count = flag.Bool("c", false, "count number of occurrences")
 	flags.Duplicate = flag.Bool("d", false, "print only duplicate lines")
@@ -46,6 +49,8 @@ func ParseFlags() (flags uniqueize.Flags) {
 	return
 }
 
+// ParseInAndOutFiles parses the input and output files from the command line arguments and returns the files
+// or stdin and stdout if files are not specified.
 func ParseInAndOutFiles() (inputFile, outputFile *os.File, argumentsErr error) {
 	var arguments Arguments
 	arguments.InputFile = flag.Arg(0)
@@ -71,6 +76,7 @@ func ParseInAndOutFiles() (inputFile, outputFile *os.File, argumentsErr error) {
 	return
 }
 
+// GetReaderAndWriter returns a reader and a writer for the given files or stdin and stdout if files are not specified.
 func GetReaderAndWriter(inputFile, outputFile *os.File) (reader *bufio.Reader, writer *bufio.Writer) {
 	reader = bufio.NewReader(inputFile)
 	writer = bufio.NewWriter(outputFile)
@@ -78,7 +84,8 @@ func GetReaderAndWriter(inputFile, outputFile *os.File) (reader *bufio.Reader, w
 	return
 }
 
-func ReadInput(flags uniqueize.Flags, reader *bufio.Reader) (lines []string, err error) {
+// ReadInput reads the input from the reader and returns it as an array of strings.
+func ReadInput(reader *bufio.Reader) (lines []string, err error) {
 	for {
 		line, readingErr := reader.ReadString('\n')
 		if len(line) == 0 && readingErr != nil {
@@ -104,6 +111,7 @@ func ReadInput(flags uniqueize.Flags, reader *bufio.Reader) (lines []string, err
 	return
 }
 
+// WriteOutput writes the linesData array to the writer in format specified by flags.
 func WriteOutput(flags uniqueize.Flags, writer *bufio.Writer, linesData []uniqueize.LineData) (err error) {
 	for i, lineData := range linesData {
 		switch {
@@ -138,7 +146,7 @@ func main() {
 
 	reader, writer := GetReaderAndWriter(inputFile, outputFile)
 
-	lines, err := ReadInput(flags, reader)
+	lines, err := ReadInput(reader)
 	inputFile.Close()
 	if err != nil {
 		fmt.Println(err)

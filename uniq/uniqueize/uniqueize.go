@@ -6,6 +6,13 @@ import (
 	"unicode/utf8"
 )
 
+// Flags represents the flags for the uniq command
+// Count: count number of occurrences (-c)
+// Duplicate: print only duplicate lines (-d)
+// Unduplicated: print only unique lines (-u)
+// SkipFields: avoid comparing the first N fields (-f num)
+// SkipRunes: avoid comparing the first N characters (-s num)
+// IgnoreCase: ignore case differences (-i)
 type Flags struct {
 	Count        *bool
 	Duplicate    *bool
@@ -15,11 +22,13 @@ type Flags struct {
 	IgnoreCase   *bool
 }
 
+// LineData represents the line and its appearance count.
 type LineData struct {
 	Line  string
 	Count uint
 }
 
+// validateFlags checks so that only one of the flags -c, -d or -u is set.
 func validateFlags(flags Flags) error {
 	count := 0
 	if *flags.Count {
@@ -38,6 +47,7 @@ func validateFlags(flags Flags) error {
 	return nil
 }
 
+// shouldAppend checks if the line should be appended to the output according to the flags.
 func shouldAppend(lineData LineData, flags Flags) bool {
 	switch {
 	case *flags.Count:
@@ -53,6 +63,7 @@ func shouldAppend(lineData LineData, flags Flags) bool {
 	return false
 }
 
+// Uniqueize transforms input lines into []lineData according to the flags.
 func Uniqueize(lines []string, flags Flags) (linesData []LineData, err error) {
 	flagsErr := validateFlags(flags)
 	if flagsErr != nil {
