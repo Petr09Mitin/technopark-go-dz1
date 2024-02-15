@@ -1,6 +1,7 @@
 package uniqueize
 
 import (
+	"errors"
 	"strings"
 	"unicode/utf8"
 )
@@ -19,6 +20,24 @@ type LineData struct {
 	Count uint
 }
 
+func validateFlags(flags Flags) error {
+	count := 0
+	if *flags.Count {
+		count++
+	}
+	if *flags.Duplicate {
+		count++
+	}
+	if *flags.Unduplicated {
+		count++
+	}
+	if count > 1 {
+		return errors.New("invalid flags")
+	}
+
+	return nil
+}
+
 func shouldAppend(lineData LineData, flags Flags) bool {
 	switch {
 	case *flags.Count:
@@ -34,7 +53,13 @@ func shouldAppend(lineData LineData, flags Flags) bool {
 	return false
 }
 
-func Uniqueize(lines []string, flags Flags) (linesData []LineData) {
+func Uniqueize(lines []string, flags Flags) (linesData []LineData, err error) {
+	flagsErr := validateFlags(flags)
+	if flagsErr != nil {
+		err = flagsErr
+		return
+	}
+
 	prevLine := ""
 	prevCurrLine := ""
 	var currCount uint = 0

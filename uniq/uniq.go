@@ -17,24 +17,6 @@ type Arguments struct {
 	OutputFile string
 }
 
-func ValidateFlags(flags uniqueize.Flags) error {
-	count := 0
-	if *flags.Count {
-		count++
-	}
-	if *flags.Duplicate {
-		count++
-	}
-	if *flags.Unduplicated {
-		count++
-	}
-	if count > 1 {
-		return errors.New("invalid flags")
-	}
-
-	return nil
-}
-
 func ValidateArguments(arguments Arguments) error {
 	if arguments.InputFile != "" {
 		if _, err := os.Stat(arguments.InputFile); os.IsNotExist(err) {
@@ -51,7 +33,7 @@ func ValidateArguments(arguments Arguments) error {
 	return nil
 }
 
-func ParseFlags() (flags uniqueize.Flags, flagsErr error) {
+func ParseFlags() (flags uniqueize.Flags) {
 	flags.Count = flag.Bool("c", false, "count number of occurrences")
 	flags.Duplicate = flag.Bool("d", false, "print only duplicate lines")
 	flags.Unduplicated = flag.Bool("u", false, "print only unique lines")
@@ -60,8 +42,6 @@ func ParseFlags() (flags uniqueize.Flags, flagsErr error) {
 	flags.IgnoreCase = flag.Bool("i", false, "ignore case differences")
 
 	flag.Parse()
-
-	flagsErr = ValidateFlags(flags)
 
 	return
 }
@@ -147,12 +127,7 @@ func WriteOutput(flags uniqueize.Flags, writer *bufio.Writer, linesData []unique
 }
 
 func main() {
-	flags, flagsErr := ParseFlags()
-
-	if flagsErr != nil {
-		fmt.Println(flagsErr)
-		return
-	}
+	flags := ParseFlags()
 
 	inputFile, outputFile, argumentsErr := ParseInAndOutFiles()
 
@@ -170,7 +145,11 @@ func main() {
 		return
 	}
 
-	linesData := uniqueize.Uniqueize(lines, flags)
+	linesData, err := uniqueize.Uniqueize(lines, flags)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	WriteOutput(flags, writer, linesData)
 	outputFile.Close()
