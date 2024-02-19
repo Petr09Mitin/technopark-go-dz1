@@ -42,6 +42,7 @@ var OperatorsData = map[string]struct {
 	},
 }
 
+// parseTokensFromExpression parses mathmatical tokens from expression
 func parseTokensFromExpression(expression string) (tokens []string, err error) {
 	number := ""
 	operandsCount, operatorsCount := 0, 0
