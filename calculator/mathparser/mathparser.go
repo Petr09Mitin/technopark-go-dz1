@@ -18,7 +18,7 @@ const (
 	rightParenth = ")"
 )
 
-var anyNumberRegexp, _ = regexp.Compile(`\d+$`)
+var anyNumberRegexp, _ = regexp.Compile(`[-]?[\d]+\.?[\d]*$`)
 
 var OperatorsData = map[string]struct {
 	priority          uint
@@ -63,8 +63,17 @@ func parseTokensFromExpression(expression string) (tokens []string, err error) {
 				operandsCount++
 				number = ""
 			}
-			operatorsCount++
-			tokens = append(tokens, char)
+
+			var lastToken string
+			if len(tokens) > 0 {
+				lastToken = tokens[len(tokens)-1]
+			}
+			if lastToken == leftParenth || anyNumberRegexp.MatchString(lastToken) {
+				operatorsCount++
+				tokens = append(tokens, char)
+			} else {
+				number = minus
+			}
 		case multiply:
 			if number != "" {
 				tokens = append(tokens, number)
@@ -162,7 +171,7 @@ func parseRPNFromExpression(expression string) (rpn *queue.Queue[string], err er
 			continue
 		}
 
-		err = errors.New("invalid token in input expression")
+		err = errors.New("invalid input expression")
 		return
 	}
 
@@ -181,7 +190,7 @@ func evalOperator(operand1, operand2, operator string) (result string, err error
 	floatOperand1, err1 := strconv.ParseFloat(operand1, 64)
 	floatOperand2, err2 := strconv.ParseFloat(operand2, 64)
 	if err1 != nil || err2 != nil {
-		err = errors.New("invalid operands in input expression")
+		err = errors.New("invalid input expression")
 	}
 	switch operator {
 	case plus:
@@ -197,7 +206,7 @@ func evalOperator(operand1, operand2, operator string) (result string, err error
 		}
 		result = strconv.FormatFloat(floatOperand1/floatOperand2, 'f', -1, 64)
 	default:
-		err = errors.New("invalid token in input expression")
+		err = errors.New("invalid input expression")
 		return
 	}
 	return
@@ -230,7 +239,7 @@ func CalculateExpression(expression string) (result float64, err error) {
 			continue
 		}
 
-		err = errors.New("invalid token in input expression")
+		err = errors.New("invalid input expression")
 		return
 	}
 

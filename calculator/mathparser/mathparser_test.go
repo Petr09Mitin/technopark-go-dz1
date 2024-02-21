@@ -45,6 +45,20 @@ var testCases = map[string]struct {
 			err:    nil,
 		},
 	},
+	"negative number addition": {
+		input: "-5 + 3",
+		expected: Expected{
+			result: -2,
+			err:    nil,
+		},
+	},
+	"negative number addition 2": {
+		input: "3 + -5",
+		expected: Expected{
+			result: -2,
+			err:    nil,
+		},
+	},
 	"parentheses": {
 		input: "(2+2)*2",
 		expected: Expected{
@@ -70,14 +84,14 @@ var testCases = map[string]struct {
 		input: "1 % 0",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid operator in input expression"),
+			err:    errors.New("invalid input expression"),
 		},
 	},
 	"invalid operand": {
 		input: "1 + 12,12",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid operands in input expression"),
+			err:    errors.New("invalid input expression"),
 		},
 	},
 	"invalid left parenthese": {

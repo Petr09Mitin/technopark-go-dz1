@@ -1,25 +1,24 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"os"
 
 	"github.com/Petr09Mitin/technopark-go-dz1/calculator/mathparser"
 )
 
 func main() {
-	flag.Parse()
-	expression := flag.Arg(0)
+	expression := os.Args[1]
 	if expression == "" {
-		fmt.Print("no expression provided")
+		fmt.Println("no expression provided")
 		return
 	}
 
 	result, err := mathparser.CalculateExpression(expression)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Println(err)
 		return
 	}
 
-	fmt.Print(result)
+	fmt.Println(result)
 }
