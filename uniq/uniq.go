@@ -5,9 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
-	"strings"
 
 	"github.com/Petr09Mitin/technopark-go-dz1/uniq/uniqueize"
 )
@@ -17,6 +15,8 @@ type Arguments struct {
 	InputFile  string
 	OutputFile string
 }
+
+const terminator = "ENDLINE"
 
 func handleError(err error) {
 	const docString string = `
@@ -46,7 +46,6 @@ Parameters:
 		if err.Error() == "invalid flags" {
 			fmt.Print(docString)
 		}
-		os.Exit(0)
 	}
 }
 
@@ -55,13 +54,17 @@ func ValidateArguments(arguments Arguments) error {
 	if arguments.InputFile != "" {
 		if _, err := os.Stat(arguments.InputFile); os.IsNotExist(err) {
 			return errors.New("input file does not exist")
+		} else if err != nil {
+			return err
 		}
 
 		if arguments.OutputFile != "" {
-			if _, err := os.Stat(arguments.OutputFile); os.IsNotExist(err) {
-				return errors.New("output file does not exist")
+			if _, err := os.Stat(arguments.OutputFile); err != nil && !os.IsNotExist(err) {
+				return err
 			}
 		}
+	} else {
+		fmt.Println("Enter lines one by one. When you're finished, enter", terminator)
 	}
 
 	return nil
@@ -72,8 +75,8 @@ func ParseFlags() (flags uniqueize.Flags) {
 	flags.Count = flag.Bool("c", false, "count number of occurrences")
 	flags.Duplicate = flag.Bool("d", false, "print only duplicate lines")
 	flags.Unduplicated = flag.Bool("u", false, "print only unique lines")
-	flags.SkipFields = flag.Uint("f", 0, "avoid comparing the first N fields")
-	flags.SkipRunes = flag.Uint("s", 0, "avoid comparing the first N characters")
+	flags.SkipFields = flag.Int("f", 0, "avoid comparing the first N fields")
+	flags.SkipRunes = flag.Int("s", 0, "avoid comparing the first N characters")
 	flags.IgnoreCase = flag.Bool("i", false, "ignore case differences")
 
 	flag.Parse()
@@ -98,11 +101,11 @@ func ParseInAndOutFiles() (inputFile, outputFile *os.File, argumentsErr error) {
 	outputFile = os.Stdout
 
 	if arguments.InputFile != "" {
-		inputFile, _ = os.Open(arguments.InputFile)
+		inputFile, argumentsErr = os.Open(arguments.InputFile)
 	}
 
 	if arguments.OutputFile != "" {
-		outputFile, _ = os.Create(arguments.OutputFile)
+		outputFile, argumentsErr = os.Create(arguments.OutputFile)
 	}
 
 	return
@@ -118,47 +121,34 @@ func GetReaderAndWriter(inputFile, outputFile *os.File) (reader *bufio.Reader, w
 
 // ReadInput reads the input from the reader and returns it as an array of strings.
 func ReadInput(reader *bufio.Reader) (lines []string, err error) {
-	for {
-		line, readingErr := reader.ReadString('\n')
-		if len(line) == 0 && readingErr != nil {
-			if readingErr == io.EOF {
-				break
-			}
-			err = readingErr
-			return
-		}
-
-		line = strings.TrimSuffix(line, "\n")
-		line = strings.TrimSuffix(line, "\r")
-		lines = append(lines, line)
-
-		if readingErr != nil {
-			if readingErr == io.EOF {
-				break
-			}
-			err = readingErr
-			return
-		}
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
 	}
+
+	if err = scanner.Err(); err != nil {
+		return
+	}
+
 	return
 }
 
 // WriteOutput writes the linesData array to the writer in format specified by flags.
 func WriteOutput(flags uniqueize.Flags, writer *bufio.Writer, linesData []uniqueize.LineData) (err error) {
-	for i, lineData := range linesData {
+	for _, lineData := range linesData {
 		switch {
 		case *flags.Count:
-			fmt.Fprintf(writer, "%d %s", lineData.Count, lineData.Line)
+			_, err = fmt.Fprintln(writer, lineData.Count, lineData.Line)
 		case *flags.Duplicate && lineData.Count > 1:
-			fmt.Fprintf(writer, "%s", lineData.Line)
+			_, err = fmt.Fprintln(writer, lineData.Line)
 		case *flags.Unduplicated && lineData.Count == 1:
-			fmt.Fprintf(writer, "%s", lineData.Line)
+			_, err = fmt.Fprintln(writer, lineData.Line)
 		case !*flags.Count && !*flags.Duplicate && !*flags.Unduplicated:
-			fmt.Fprintf(writer, "%s", lineData.Line)
+			_, err = fmt.Fprintln(writer, lineData.Line)
 		}
 
-		if i != len(linesData)-1 {
-			fmt.Fprintf(writer, "\n")
+		if err != nil {
+			return
 		}
 	}
 
@@ -171,17 +161,30 @@ func main() {
 
 	inputFile, outputFile, argumentsErr := ParseInAndOutFiles()
 
-	handleError(argumentsErr)
+	if argumentsErr != nil {
+		handleError(argumentsErr)
+		return
+	}
 
 	reader, writer := GetReaderAndWriter(inputFile, outputFile)
+	defer inputFile.Close()
+	defer outputFile.Close()
 
-	lines, err := ReadInput(reader)
-	inputFile.Close()
-	handleError(err)
+	lines, readErr := ReadInput(reader)
+	if readErr != nil {
+		handleError(readErr)
+		return
+	}
 
-	linesData, err := uniqueize.Uniqueize(lines, flags)
-	handleError(err)
+	linesData, uniqErr := uniqueize.Uniqueize(lines, flags)
+	if uniqErr != nil {
+		handleError(uniqErr)
+		return
+	}
 
-	WriteOutput(flags, writer, linesData)
-	outputFile.Close()
+	writeErr := WriteOutput(flags, writer, linesData)
+	if writeErr != nil {
+		handleError(writeErr)
+		return
+	}
 }
