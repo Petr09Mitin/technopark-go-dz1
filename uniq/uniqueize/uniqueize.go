@@ -17,8 +17,8 @@ type Flags struct {
 	Count        *bool
 	Duplicate    *bool
 	Unduplicated *bool
-	SkipFields   *uint
-	SkipRunes    *uint
+	SkipFields   *int
+	SkipRunes    *int
 	IgnoreCase   *bool
 }
 
@@ -40,7 +40,7 @@ func validateFlags(flags Flags) error {
 	if *flags.Unduplicated {
 		count++
 	}
-	if count > 1 {
+	if count > 1 || *flags.SkipFields < 0 || *flags.SkipRunes < 0 {
 		return errors.New("invalid flags")
 	}
 
@@ -73,15 +73,22 @@ func Uniqueize(lines []string, flags Flags) (linesData []LineData, err error) {
 
 	prevLine := ""
 	prevCurrLine := ""
-	var currCount uint = 0
+	var currCount uint
+	hasPrevLineChanged := false
 	for _, line := range lines {
+		line = strings.Trim(line, " ")
 		currLine := line
-		if *flags.SkipFields > 0 && *flags.SkipFields < uint(utf8.RuneCountInString(currLine)) {
-			currLine = strings.Join(strings.Fields(currLine)[*flags.SkipFields:], " ")
+		fields := strings.Fields(currLine)
+		if *flags.SkipFields < len(fields) {
+			currLine = strings.Join(fields[*flags.SkipFields:], " ")
+		} else {
+			currLine = ""
 		}
 
-		if *flags.SkipRunes > 0 && *flags.SkipRunes < uint(utf8.RuneCountInString(currLine)) {
+		if *flags.SkipRunes < utf8.RuneCountInString(currLine) {
 			currLine = string([]rune(currLine)[*flags.SkipRunes:])
+		} else {
+			currLine = ""
 		}
 
 		if *flags.IgnoreCase {
@@ -98,10 +105,15 @@ func Uniqueize(lines []string, flags Flags) (linesData []LineData, err error) {
 			currCount = 1
 			prevCurrLine = currLine
 			prevLine = line
+			hasPrevLineChanged = true
 		}
 	}
 
 	lineData := LineData{Line: prevLine, Count: currCount}
+	if !hasPrevLineChanged && len(lines) > 0 {
+		lineData.Line = lines[0]
+	}
+
 	if currCount != 0 && shouldAppend(lineData, flags) {
 		linesData = append(linesData, lineData)
 	}
