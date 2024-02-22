@@ -1,7 +1,6 @@
 package mathparser_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/Petr09Mitin/technopark-go-dz1/calculator/mathparser"
@@ -59,6 +58,27 @@ var testCases = map[string]struct {
 			err:    nil,
 		},
 	},
+	"fractions addition": {
+		input: "1 + 1.5",
+		expected: Expected{
+			result: 2.5,
+			err:    nil,
+		},
+	},
+	"fractions division": {
+		input: "2.4 / 4.8",
+		expected: Expected{
+			result: 0.5,
+			err:    nil,
+		},
+	},
+	"negative fractions division": {
+		input: "2.4 / -4.8",
+		expected: Expected{
+			result: -0.5,
+			err:    nil,
+		},
+	},
 	"parentheses": {
 		input: "(2+2)*2",
 		expected: Expected{
@@ -73,53 +93,81 @@ var testCases = map[string]struct {
 			err:    nil,
 		},
 	},
+	"complex 2": {
+		input: "(-1.4) / 0.7 + 2.5 * 2 - 5",
+		expected: Expected{
+			result: -2,
+			err:    nil,
+		},
+	},
+	"complex 3": {
+		input: "0.1 * 10 + 4 / -2 + 2 * 1.0",
+		expected: Expected{
+			result: 1,
+			err:    nil,
+		},
+	},
+	"complex 4": {
+		input: "(2 / -2) * -2 * .1 / .1",
+		expected: Expected{
+			result: 2,
+			err:    nil,
+		},
+	},
 	"zero division": {
 		input: "1 / 0",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("zero division error"),
+			err:    mathparser.ErrZeroDivision,
 		},
 	},
 	"invalid operator": {
 		input: "1 % 0",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid input expression"),
+			err:    mathparser.ErrInvalidExpression,
 		},
 	},
 	"invalid operand": {
 		input: "1 + 12,12",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid input expression"),
+			err:    mathparser.ErrInvalidExpression,
 		},
 	},
 	"invalid left parenthese": {
 		input: "1 + (2",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid parentheses sequence in input expression"),
+			err:    mathparser.ErrInvalidParenths,
 		},
 	},
 	"invalid left parenthese 2": {
 		input: "1(2",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid input expression"),
+			err:    mathparser.ErrInvalidExpression,
 		},
 	},
 	"invalid right parenthese": {
 		input: "1 + 2)",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid parentheses sequence in input expression"),
+			err:    mathparser.ErrInvalidParenths,
 		},
 	},
 	"invalid expression": {
 		input: "1 + 2 +",
 		expected: Expected{
 			result: 0,
-			err:    errors.New("invalid input expression"),
+			err:    mathparser.ErrInvalidExpression,
+		},
+	},
+	"empty string": {
+		input: "",
+		expected: Expected{
+			result: 0,
+			err:    mathparser.ErrInvalidExpression,
 		},
 	},
 }
@@ -129,7 +177,11 @@ func TestCalculateExpression(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			result, err := mathparser.CalculateExpression(test.input)
 			assert.Equal(t, test.expected.result, result)
-			assert.Equal(t, test.expected.err, err)
+			if test.expected.err != nil {
+				assert.ErrorIs(t, err, test.expected.err)
+			} else {
+				assert.Nil(t, err)
+			}
 		})
 	}
 }

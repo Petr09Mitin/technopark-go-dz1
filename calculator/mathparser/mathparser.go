@@ -1,12 +1,10 @@
 package mathparser
 
 import (
-	"errors"
 	"regexp"
 	"strconv"
 
-	"github.com/jhunters/goassist/container/queue"
-	"github.com/jhunters/goassist/container/stack"
+	"github.com/Petr09Mitin/technopark-go-dz1/calculator/datastruct"
 )
 
 const (
@@ -68,7 +66,7 @@ func parseTokensFromExpression(expression string) (tokens []string, err error) {
 			if len(tokens) > 0 {
 				lastToken = tokens[len(tokens)-1]
 			}
-			if lastToken == leftParenth || anyNumberRegexp.MatchString(lastToken) {
+			if lastToken == rightParenth || anyNumberRegexp.MatchString(lastToken) {
 				operatorsCount++
 				tokens = append(tokens, char)
 			} else {
@@ -121,23 +119,23 @@ func parseTokensFromExpression(expression string) (tokens []string, err error) {
 	}
 
 	if operandsCount != operatorsCount+1 {
-		err = errors.New("invalid input expression")
+		err = ErrInvalidExpression
 	}
 	return
 }
 
-func shouldParseStack(stack *stack.Stack[string], parsedToken string) (shouldParse bool) {
-	return !stack.IsEmpty() && (OperatorsData[stack.Copy().Pop()].priority > OperatorsData[parsedToken].priority || OperatorsData[stack.Copy().Pop()].priority == OperatorsData[parsedToken].priority && OperatorsData[parsedToken].isLeftAssociative)
+func shouldParseStack(stack *datastruct.Stack[string], parsedToken string) (shouldParse bool) {
+	return !stack.IsEmpty() && (OperatorsData[stack.Peek()].priority > OperatorsData[parsedToken].priority || OperatorsData[stack.Peek()].priority == OperatorsData[parsedToken].priority && OperatorsData[parsedToken].isLeftAssociative)
 }
 
-func parseRPNFromExpression(expression string) (rpn *queue.Queue[string], err error) {
+func parseRPNFromExpression(expression string) (rpn *datastruct.Queue[string], err error) {
 	tokens, err := parseTokensFromExpression(expression)
 	if err != nil {
 		return
 	}
 
-	stack := stack.NewStack[string]()
-	queue := queue.NewQueue[string]()
+	stack := datastruct.NewStack[string]()
+	queue := datastruct.NewQueue[string]()
 
 	for _, token := range tokens {
 		if anyNumberRegexp.MatchString(token) {
@@ -165,20 +163,20 @@ func parseRPNFromExpression(expression string) (rpn *queue.Queue[string], err er
 			}
 
 			if stackToken != leftParenth {
-				err = errors.New("invalid parentheses sequence in input expression")
+				err = ErrInvalidParenths
 				return
 			}
 			continue
 		}
 
-		err = errors.New("invalid input expression")
+		err = ErrInvalidExpression
 		return
 	}
 
 	for !stack.IsEmpty() {
 		stackToken := stack.Pop()
 		if stackToken == leftParenth {
-			err = errors.New("invalid parentheses sequence in input expression")
+			err = ErrInvalidParenths
 			return
 		}
 		queue.Enqueue(stackToken)
@@ -190,7 +188,7 @@ func evalOperator(operand1, operand2, operator string) (result string, err error
 	floatOperand1, err1 := strconv.ParseFloat(operand1, 64)
 	floatOperand2, err2 := strconv.ParseFloat(operand2, 64)
 	if err1 != nil || err2 != nil {
-		err = errors.New("invalid input expression")
+		err = ErrInvalidExpression
 	}
 	switch operator {
 	case plus:
@@ -201,12 +199,12 @@ func evalOperator(operand1, operand2, operator string) (result string, err error
 		result = strconv.FormatFloat(floatOperand1*floatOperand2, 'f', -1, 64)
 	case divide:
 		if floatOperand2 == 0 {
-			err = errors.New("zero division error")
+			err = ErrZeroDivision
 			return
 		}
 		result = strconv.FormatFloat(floatOperand1/floatOperand2, 'f', -1, 64)
 	default:
-		err = errors.New("invalid input expression")
+		err = ErrInvalidExpression
 		return
 	}
 	return
@@ -218,7 +216,7 @@ func CalculateExpression(expression string) (result float64, err error) {
 		return
 	}
 
-	stack := stack.NewStack[string]()
+	stack := datastruct.NewStack[string]()
 
 	for token := rpn.Dequeue(); token != ""; token = rpn.Dequeue() {
 		if anyNumberRegexp.MatchString(token) {
@@ -239,7 +237,7 @@ func CalculateExpression(expression string) (result float64, err error) {
 			continue
 		}
 
-		err = errors.New("invalid input expression")
+		err = ErrInvalidExpression
 		return
 	}
 
