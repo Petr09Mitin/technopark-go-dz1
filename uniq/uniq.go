@@ -123,7 +123,11 @@ func GetReaderAndWriter(inputFile, outputFile *os.File) (reader *bufio.Reader, w
 func ReadInput(reader *bufio.Reader) (lines []string, err error) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+		line := scanner.Text()
+		if line == terminator {
+			break
+		}
+		lines = append(lines, line)
 	}
 
 	if err = scanner.Err(); err != nil {
