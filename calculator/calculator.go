@@ -8,6 +8,11 @@ import (
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("no expression provided")
+		return
+	}
+
 	expression := os.Args[1]
 	if expression == "" {
 		fmt.Println("no expression provided")
